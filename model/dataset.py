@@ -4,18 +4,23 @@ from PIL import Image
 import numpy as np
 import torchvision.transforms.v2 as v2
 import matplotlib.pyplot as plt
+import pandas as pd
 
-class SNEMI3DDataset(torch.utils.data.Dataset):
-    def __init__(self, indices: list[int], augmentation: bool, weight_map: bool=False):
+class Dataset(torch.utils.data.Dataset):
+    def __init__(self, dataset_name: str, indices: list[int], augmentation: bool, weight_map_name=None):
         self.indices = indices
-        self.weight_map = weight_map
         cwd = os.getcwd()
-        self.images_dir = cwd + "/data/images/"
-        self.masks_dir = cwd + "/data/masks/"
-        self.maps_dir = cwd + "/data/maps/"
+        self.images_dir = cwd + "/data/" + dataset_name + "/images/"
+        self.masks_dir = cwd + "/data/" + dataset_name + "/masks/"
+        if weight_map_name != None:
+            self.maps_dir = cwd + "/data/" + dataset_name + "/" + weight_map_name + "/"
+        else:
+            self.maps_dir = None
 
-        mean = [0.5053152359607174]
-        std = [0.16954360899089577]
+        dataset_metadata = pd.read_csv(cwd + "/data/" + dataset_name + "/dataset_metadata.csv")
+
+        mean = dataset_metadata["mean"].tolist()
+        std = dataset_metadata["std"].tolist()
 
         self.norm = v2.Normalize(mean=mean, std=std)
 
@@ -50,7 +55,7 @@ class SNEMI3DDataset(torch.utils.data.Dataset):
             class_weight = class_weight * 1.0 / torch.min(class_weight)
             class_weight = torch.sum(class_weight) - class_weight
 
-        if self.weight_map:
+        if self.maps_dir != None:
             w_map = np.load(self.maps_dir + str(self.indices[idx]).zfill(3) + '.npy')
             w_map = torch.tensor(w_map).unsqueeze(0).to(torch.float32)
             w_map = v2.functional.to_image(w_map)
@@ -67,16 +72,16 @@ class SNEMI3DDataset(torch.utils.data.Dataset):
     
 # test
 if __name__ == "__main__":
-    dataset = SNEMI3DDataset([1])
+    dataset = Dataset("mass_road", [0], True, None)
     print(len(dataset))
-    img, msk = dataset[0]
+    img, msk, _, _ = dataset[0]
     print(img.shape)
     print(msk)
     print(torch.min(msk), torch.max(msk))
     print(torch.min(img), torch.max(img))
     
     fig, axes = plt.subplots(1, 2)
-    axes[0].imshow(img.squeeze())
+    axes[0].imshow(torch.permute(img, (1,2,0)).squeeze())
     axes[1].imshow(msk.squeeze())
     plt.show()
     

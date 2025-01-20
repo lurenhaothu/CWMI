@@ -1,6 +1,6 @@
 import torch
 from sklearn.model_selection import KFold
-from model.dataset import SNEMI3DDataset
+from model.dataset import Dataset
 from torch.utils.data import DataLoader
 from model.unet import UNet
 from PIL import Image
@@ -19,52 +19,35 @@ from model.clDice.clDice import soft_dice_cldice
 from model.rmi.rmi import RMILoss
 from model.MI.SPMI import SPMILoss
 from plot_result import plot_result
+from model.skea_topo.skea_topo_loss import Skea_topo_loss
+import model.att_unet as models
 
-#lossFunc = RMILoss(num_classes=2, loss_weight_lambda=0.5, rmi_pool_size=3, rmi_pool_stride=3)
-#lossFuncs = [(SPMILoss(imageSize=512, spN = 4, spK=4, beta=0.25, lamb=0.5, ffl=False), SPMILoss(imageSize=1024, spN = 4, spK=4, beta=0.25, lamb=0.5, ffl=False)), 
-#             (loss.BCE_withClassBalance(), loss.BCE_withClassBalance()),
-#             (loss.DiceLoss(), loss.DiceLoss()),
-#             (soft_dice_cldice(), soft_dice_cldice()),
-#             (RMILoss(num_classes=2), RMILoss(num_classes=2)),
-#             ]
+lossFuncs = [(loss.BCELoss, "")]
 
-lossFuncs = [(SPMILoss(imageSize=512, spN = 4, spK=4, beta=0.25, lamb=0.1, mag=1, ffl=False), 
-              SPMILoss(imageSize=1024, spN = 4, spK=4, beta=0.25, lamb=0.1, mag=1, ffl=False), "b_0.25_l_0.1_m_1"), 
-             (SPMILoss(imageSize=512, spN = 4, spK=4, beta=0.25, lamb=0.3, mag=1, ffl=False), 
-              SPMILoss(imageSize=1024, spN = 4, spK=4, beta=0.25, lamb=0.3, mag=1, ffl=False), "b_0.25_l_0.3_m_1"), 
-             (SPMILoss(imageSize=512, spN = 4, spK=4, beta=0.25, lamb=0.5, mag=1, ffl=False), 
-              SPMILoss(imageSize=1024, spN = 4, spK=4, beta=0.25, lamb=0.5, mag=1, ffl=False), "b_0.25_l_0.5_m_1"), 
-             (SPMILoss(imageSize=512, spN = 4, spK=4, beta=0.25, lamb=0.7, mag=1, ffl=False), 
-              SPMILoss(imageSize=1024, spN = 4, spK=4, beta=0.25, lamb=0.7, mag=1, ffl=False), "b_0.25_l_0.7_m_1"), 
-             (SPMILoss(imageSize=512, spN = 4, spK=4, beta=0.25, lamb=0.9, mag=1, ffl=False), 
-              SPMILoss(imageSize=1024, spN = 4, spK=4, beta=0.25, lamb=0.9, mag=1, ffl=False), "b_0.25_l_0.9_m_1"), 
-             ]
+model_classes = [models.AttU_Net, models.U_Net]
 
-def experiment(lossFunc, lossFunc_val, note=''):
+def experiment(dataset_name, model_class, lossFunc, note=''):
 
     val_metric = metrics.miou
 
-    test_metrics = [metrics.miou, metrics.vi, metrics.mdice, metrics.ari] #,metrics.map_2018kdsb,  metrics.compute_bettis_own]
+    test_metrics = [metrics.miou, metrics.vi, metrics.mdice, metrics.ari, metrics.hausdorff_distance]
 
     batch_size = 10
 
     epoch_num = 50
 
-    # 100 0.5053152359607173 0.19049978520827424 20570595.0 84287005.0
-
-    expriment_name = "SNEMI3D_" + lossFunc.__class__.__name__ + "_" + note + "_" + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-    #expriment_name = "SNEMI3D_" + "SP_DIS_ALL" + "_val_" + val_name + "_btchSize_" + str(batch_size) + "_" + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    expriment_name = model_class.__name__ + "_" + dataset_name + "_" + lossFunc.__class__.__name__ + "_" + note + "_" + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
     cwd = os.getcwd()
     curResultDir = cwd + "/results/" + expriment_name + "/"
     os.makedirs(curResultDir, exist_ok=True)
 
-    load_prev = False
-    pre_res_dir_name = "SNEMI3D_BCE_CLassW_val_miou_btchSize_10_2025-01-14-18-43-31"
+    load_pretrain = False
+    pretrain_dir_name = "SNEMI3D_BCE_CLassW_val_miou_btchSize_10_2025-01-14-18-43-31"
 
-    pre_res_dir = cwd + "/results/" + pre_res_dir_name + "/"
+    pretrain_dir = cwd + "/results/" + pretrain_dir_name + "/"
 
-    numFile = 100
+    numFile = len(os.listdir(cwd + "/data/" + dataset_name + "/masks/"))
     fileList = [i for i in range(numFile)]
 
     fold_num = 3
@@ -77,8 +60,6 @@ def experiment(lossFunc, lossFunc_val, note=''):
         train_size = int(0.8 * len(train_and_val_list))
         val_size = len(train_and_val_list) - train_size
 
-        print(type(train_and_val_list))
-
         train_list = random.sample(train_and_val_list.tolist(), train_size)
         val_list = [i for i in train_and_val_list if i not in train_list]
 
@@ -89,27 +70,39 @@ def experiment(lossFunc, lossFunc_val, note=''):
         df = pd.DataFrame({'TestNumbers': test_list.tolist()})
         df.to_csv(curResultDir + 'Fold_' + str(fold) + '_test.csv', index=False)
 
-        train_dataset = SNEMI3DDataset(train_list, augmentation=True, weight_map=False)
-        val_dataset = SNEMI3DDataset(val_list, augmentation=False, weight_map=False)
-        test_dataset = SNEMI3DDataset(test_list, augmentation=False)
+        if lossFunc.__class__.__name__ == "Unet_Weight_BCE":
+            weight_map_name = "unet_maps"
+        elif lossFunc.__class__.__name__ == "WeightMapLoss":
+            weight_map_name = "ABW_maps"
+        elif lossFunc.__class__.__name__ == "Skea_topo_loss":
+            weight_map_name = "skea_topo_maps"
+        else:
+            weight_map_name = None
+
+        train_dataset = Dataset(dataset_name, train_list, augmentation=True, weight_map=weight_map_name)
+        val_dataset = Dataset(dataset_name, val_list, augmentation=False)
+        test_dataset = Dataset(dataset_name, test_list, augmentation=False)
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         val_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False)
         test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
-        unet = UNet()
+        if dataset_name == "SNEMI3D":
+            model = model_class(ch_in=1, ch_out=2)
+        else: # all other datasets are RGB
+            model = model_class(ch_in=3, ch_out=2)
 
-        if load_prev:
-            prev_dict = torch.load(pre_res_dir + "fold_" + str(fold) + "_best_model_state.pth")
-            unet.load_state_dict(prev_dict)
+        if load_pretrain:
+            prev_dict = torch.load(pretrain_dir + "fold_" + str(fold) + "_best_model_state.pth")
+            model.load_state_dict(prev_dict)
 
-        unet.cuda()
+        model.cuda()
 
-        optimizer = torch.optim.Adam(unet.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
         scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.8)
 
-        vi_record = []
-        curmin_vi = None
+        val_res_list = []
+        curmin_val_res = None
 
         for epoch in range(epoch_num):
             print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
@@ -117,20 +110,20 @@ def experiment(lossFunc, lossFunc_val, note=''):
 
             t1 = time.time()
 
-            unet.train()
-            for i, (image, mask, w_map) in enumerate(train_dataloader):
+            model.train()
+            for i, (image, mask, w_map, class_weight) in enumerate(train_dataloader):
                 image = image.cuda()
                 mask = mask.cuda()
                 w_map = w_map.cuda()
-                pred = torch.softmax(unet(image), 1)[:, 1:2, :, :]
+                pred = torch.softmax(model(image), 1)[:, 1:2, :, :]
                 # print(pred.shape, mask.shape, w_map.shape)
-                loss = lossFunc(mask, pred, w_map, epoch)
+                loss = lossFunc(mask, pred, w_map, class_weight.cuda(), epoch)
                 if i == 0:
                   print(loss)
 
                 optimizer.zero_grad()
                 loss.backward()
-                torch.nn.utils.clip_grad_norm_(unet.parameters(), 5)
+                torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
                 optimizer.step()
             scheduler.step()
 
@@ -141,16 +134,14 @@ def experiment(lossFunc, lossFunc_val, note=''):
             # torch.save(unet.state_dict(), "epoch_" + str(i) + ".pth")
 
             # validation
-            vi = 0.
             images = []
             masks = []
             preds = []
             preds_bin = []
-            vis = []
-            for index, (image, mask, w_map) in enumerate(val_dataloader):
-                unet.eval()
+            for index, (image, mask, w_map, class_weight) in enumerate(val_dataloader):
+                model.eval()
                 with torch.no_grad():
-                    pred = torch.softmax(unet(image.cuda()), 1)[:, 1:2, :, :]
+                    pred = torch.softmax(model(image.cuda()), 1)[:, 1:2, :, :]
                     images.append(image.squeeze().numpy())
                     masks.append(mask.squeeze().numpy())
                     preds.append(pred.cpu().squeeze().numpy())
@@ -168,7 +159,7 @@ def experiment(lossFunc, lossFunc_val, note=''):
                     plot_figures.append(dif)
 
                     pred.requires_grad = True
-                    l = lossFunc_val(mask.cuda(), pred, w_map.cuda())
+                    l = lossFunc(mask.cuda(), pred, w_map.cuda(), class_weight.cuda())
                     grad = torch.autograd.grad(l, pred)
                     plot_figures.append(grad[0].cpu().squeeze().numpy())
 
@@ -177,13 +168,13 @@ def experiment(lossFunc, lossFunc_val, note=''):
 
 
             with ThreadPoolExecutor(max_workers=10) as executor:
-                vis = list(executor.map(val_metric, preds_bin, masks))
-            vi = np.mean(vis)
+                val_res_temp = list(executor.map(val_metric, preds_bin, masks))
+            val_res = np.mean(val_res_temp)
 
             t3 = time.time()
             print("val time: ", t3 - t2)
 
-            vi_record.append(vi)
+            val_res_list.append(val_res)
             result = pd.DataFrame({
                 "Epoch": [epoch],
                 val_metric.__name__: [vi],
@@ -193,27 +184,27 @@ def experiment(lossFunc, lossFunc_val, note=''):
             else:
                 result.to_csv(curResultDir + "fold_" + str(fold) + "_val_result.csv", mode='a', header=False, index=False)
 
-            if curmin_vi == None or vi < curmin_vi:
-                curmin_vi = vi
-                torch.save(unet.state_dict(), curResultDir + "fold_" + str(fold) + "_best_model_state.pth")
+            if curmin_val_res == None or val_res < curmin_val_res:
+                curmin_val_res = val_res
+                torch.save(model.state_dict(), curResultDir + "fold_" + str(fold) + "_best_model_state.pth")
                 print("save best model")
 
-            print("epoch: " + str(epoch) + " " + val_metric.__name__ + ": " + str(vi))
+            print("epoch: " + str(epoch) + " " + val_metric.__name__ + ": " + str(val_res))
 
         #test
         best_state_dict = torch.load(curResultDir + "fold_" + str(fold) + "_best_model_state.pth")
-        unet.load_state_dict(best_state_dict)
-        unet.eval()
+        model.load_state_dict(best_state_dict)
+        model.eval()
 
         images_test = []
         masks_test = []
         preds_test = []
         preds_bin_test = []
         test_results = []
-        for index, (image, mask, _) in enumerate(test_dataloader):
-            unet.eval()
+        for index, (image, mask, _, _) in enumerate(test_dataloader):
+            model.eval()
             with torch.no_grad():
-                pred = torch.softmax(unet(image.cuda()), 1)[:, 1:2, :, :]
+                pred = torch.softmax(model(image.cuda()), 1)[:, 1:2, :, :]
                 images_test.append(image.squeeze().numpy())
                 masks_test.append(mask.squeeze().numpy())
                 preds_test.append(pred.cpu().squeeze().numpy())
@@ -242,5 +233,6 @@ def experiment(lossFunc, lossFunc_val, note=''):
             print(metric_name + ": " + str(value))
         print("---------------------------------------------------------")
 
-for lossFunc, lossFunc_val, note in lossFuncs:
-    experiment(lossFunc, lossFunc_val, note)
+for  model_class in model_classes:
+    for lossFunc, note in lossFuncs:
+        experiment(model_class, lossFunc, note)

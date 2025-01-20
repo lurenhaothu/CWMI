@@ -189,16 +189,11 @@ class WeightMapLoss(nn.Module):
         elif method >= 7:  # MSE
             weight_map = self._calculate_maps(mask, weight_maps, method)
             return weight_map
+        
+def map_gen_ABW(dataset_name):
 
-
-if __name__ == "__main__":
-    """
-    mask = torch.rand((3, 1, 128, 128))
-    pred = torch.rand((3, 2, 128, 128))
-    w_map = torch.rand((3, 2, 128, 128))
-    print(WeightMapLoss()(mask, pred, w_map))
-
-    """
+    mask_dir = cwd + "/data/" + dataset_name + "/masks/"
+    map_dir = cwd + "/data/" + dataset_name + "/ABW_maps/"
     t = time.time()
 
     cwd = os.getcwd()
@@ -215,4 +210,10 @@ if __name__ == "__main__":
         futures = [executor.submit(save_ABW_map, j) for j in range(100)]
 
     print(time.time() - t)
+
+
+if __name__ == "__main__":
+    dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
+    for dataset_name in dataset_names:
+        map_gen_ABW(dataset_name)
     

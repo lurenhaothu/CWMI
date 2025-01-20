@@ -1,7 +1,10 @@
 *.png
 *.tif
+*.tiff
 *.npy
 *.pyc
 *.pth
 *.csv
 *.jpg
+*.gif
+*.bmp

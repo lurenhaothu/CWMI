@@ -51,61 +51,67 @@ def calc_back_skelen(a):
     
     return skelens
 
+def map_gen_skeleton(dataset_name):
 
-if __name__ == "__main__":
-    # data_dirs = ['snemi3d/', 'iron/', 'mass_road/train_', 'mass_road/val_']  # noqa
-    data_dirs = ['/data/masks/']
     cwd = os.getcwd()
 
+    mask_dir = cwd + "/data/" + dataset_name + "/masks/"
+    map_dir = cwd + "/data/" + dataset_name + "/skea_topo_maps/"
+
     st = time.time()
-    for data in data_dirs:
-        data_dir = cwd + data  # noqa
-        label_paths = os.listdir(data_dir)
-        print('start to handle .. ', data_dir, ' -- ', len(label_paths))
-        cnt = 1
-        for i, lbp in enumerate(label_paths):
-            if lbp.split('.')[-1] in ['png', 'tif']:
-                lbp_name = lbp.split('.')[0].strip()
-                # save_dir = os.path.join(os.path.abspath(os.path.dirname(data_dir)), '../skelen/')
-                save_dir = cwd + "/data/maps/"
-                if not os.path.exists(save_dir):
-                    os.mkdir(save_dir)
-                save_path = os.path.join(save_dir, lbp_name+'.npy')
-                #if os.path.exists(save_path):
-                #    cnt += 1
-                #    print(lbp, ' already handle... skip')
-                #    continue
-                lbp = os.path.join(data_dir, lbp)
-                print('start to handle pic ', lbp, ' -- ', lbp_name, flush=True)
-                img = io.imread(lbp)
-                if np.amax(img) == 255 and len(np.unique(img)) == 2:
-                    img = img * 1.0 / 255.0
-                if 'snemi3d' in data or 'iron' in data:
-                    img = 1-img   # If the foreground in the image is 0, then the pixels need to be inverted.
-                skelen = calc_back_skelen(img)
-                print(i, ' costs ', time.time() - st, flush=True)
 
-                print('skelen 0 --> min ', np.amin(skelen[:,:,0]), ' max: ', np.amax(skelen[:, :, 0]), flush=True)
-                print('skelen 1 --> min ', np.amin(skelen[:,:,0]), ' max: ', np.amax(skelen[:, :, 0]), flush=True)
+    data_dir = mask_dir  # noqa
+    label_paths = os.listdir(data_dir)
+    # print('start to handle .. ', data_dir, ' -- ', len(label_paths))
+    cnt = 1
+    for i, lbp in enumerate(label_paths):
+        if lbp.split('.')[-1] in ['png', 'tif']:
+            lbp_name = lbp.split('.')[0].strip()
+            # save_dir = os.path.join(os.path.abspath(os.path.dirname(data_dir)), '../skelen/')
+            save_dir = map_dir
+            if not os.path.exists(save_dir):
+                os.mkdir(save_dir)
+            save_path = os.path.join(save_dir, lbp_name+'.npy')
+            #if os.path.exists(save_path):
+            #    cnt += 1
+            #    print(lbp, ' already handle... skip')
+            #    continue
+            lbp = os.path.join(data_dir, lbp)
+            #print('start to handle pic ', lbp, ' -- ', lbp_name, flush=True)
+            img = io.imread(lbp)
+            if np.amax(img) == 255 and len(np.unique(img)) == 2:
+                img = img * 1.0 / 255.0
+            if 'snemi3d' in data or 'iron' in data:
+                img = 1-img   # If the foreground in the image is 0, then the pixels need to be inverted.
+            skelen = calc_back_skelen(img)
+            #print(i, ' costs ', time.time() - st, flush=True)
 
-                if cnt == 1:
-                    plt.figure(figsize=(7, 10))
-                    plt.subplot(2,1,1), plt.imshow(skelen[:,:,0], cmap='gray'), plt.colorbar(), plt.title('back_skelen')
-                    plt.subplot(2,1,2), plt.imshow(skelen[:,:,1], cmap='gray'), plt.colorbar(), plt.title('fore_skelen')
-                    plt.savefig('./'+data.split('/')[0]+'_skelen.jpg')
-                    plt.show()
-                    # break
-                
-                skelen = np.transpose(skelen, axes=(2, 0, 1))
+            #print('skelen 0 --> min ', np.amin(skelen[:,:,0]), ' max: ', np.amax(skelen[:, :, 0]), flush=True)
+            #print('skelen 1 --> min ', np.amin(skelen[:,:,0]), ' max: ', np.amax(skelen[:, :, 0]), flush=True)
 
-                matrix = np.load(save_path)
-                matrix = np.concatenate((matrix, skelen), axis=0)
-                C, _, _ = matrix.shape
-                if C == 4:
-                    np.save(os.path.join(save_dir, lbp_name+'.npy'), matrix)
-                else:
-                    print("skip")
-                del skelen
-                gc.collect()
-                cnt += 1
-        print('handle ... ', data, ' done!')
+            #if cnt == 1:
+            #    plt.figure(figsize=(7, 10))
+            #    plt.subplot(2,1,1), plt.imshow(skelen[:,:,0], cmap='gray'), plt.colorbar(), plt.title('back_skelen')
+            #    plt.subplot(2,1,2), plt.imshow(skelen[:,:,1], cmap='gray'), plt.colorbar(), plt.title('fore_skelen')
+            #    plt.savefig('./'+data.split('/')[0]+'_skelen.jpg')
+            #    plt.show()
+            #    # break
+            
+            skelen = np.transpose(skelen, axes=(2, 0, 1))
+
+            matrix = np.load(save_path)
+            matrix = np.concatenate((matrix, skelen), axis=0)
+            C, _, _ = matrix.shape
+            if C == 4:
+                np.save(os.path.join(save_dir, lbp_name+'.npy'), matrix)
+            else:
+                print("skip")
+            del skelen
+            gc.collect()
+            cnt += 1
+        # print('handle ... ', data, ' done!')
+
+if __name__ == "__main__":
+    dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
+    for dataset_name in dataset_names:
+        map_gen_skeleton(dataset_name)

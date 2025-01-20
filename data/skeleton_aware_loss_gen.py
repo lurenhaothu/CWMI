@@ -206,54 +206,58 @@ class SkeletonAwareWeight():
         return weight
 
 
-if __name__ == "__main__":
-    # data_dirs = ['snemi3d/', 'iron/', 'mass_road/train_', 'mass_road/val_']  # noqa
-    data_dirs = ["/data/"]
+def map_gen_skea_topo(dataset_name):
+
+    cwd = os.getcwd()
+
+    mask_dir = cwd + "/data/" + dataset_name + "/masks/"
+    map_dir = cwd + "/data/" + dataset_name + "/skea_topo_maps/"
     weight_fuc = SkeletonAwareWeight()
     st = time.time()
 
     cwd = os.getcwd()
 
-    
-    for data in data_dirs:
-        data_dir = cwd +'/data/masks/'
-        label_paths = os.listdir(data_dir)
-        print('start to handle .. ', data_dir, ' -- ', len(label_paths))
-        cnt = 0
-        for i, lbp in enumerate(label_paths):
-            if lbp.split('.')[-1] in ['png', 'tif']:
-                lbp_name = lbp.split('.')[0].strip()
-                lbp = os.path.join(data_dir, lbp)
-                print('start to handle pic ', lbp, ' -- ', lbp_name)
-                img = io.imread(lbp)
-                if np.amax(img) == 255 and len(np.unique(img)) == 2:
-                    img = img * 1.0 / 255.0
+    data_dir = mask_dir
+    label_paths = os.listdir(data_dir)
+    # print('start to handle .. ', data_dir, ' -- ', len(label_paths))
+    cnt = 0
+    for i, lbp in enumerate(label_paths):
+        if lbp.split('.')[-1] in ['png', 'tif']:
+            lbp_name = lbp.split('.')[0].strip()
+            lbp = os.path.join(data_dir, lbp)
+            # print('start to handle pic ', lbp, ' -- ', lbp_name)
+            img = io.imread(lbp)
+            if np.amax(img) == 255 and len(np.unique(img)) == 2:
+                img = img * 1.0 / 255.0
 
-                single_border = False
-                if 'iron' in data or 'mass_road' in data:
-                    single_border = True   # evenly placed objects
-                if 'snemi3d' in data or 'iron' in data:
-                    img = 1-img   # If the foreground pixels in the image are 0, then the pixels need to be inverted.
-                weight = weight_fuc._get_weight(img, single_border=single_border)
-                print(i, ' costs ', time.time() - st)
-                print('weight 0 --> min ', np.amin(weight[:,:,0]), ' max: ', np.amax(weight[:, :, 0]))
-                print('weight 1 --> min ', np.amin(weight[:,:,1]), ' max: ', np.amax(weight[:, :, 1]))
+            single_border = False
+            if 'iron' in data or 'mass_road' in data:
+                single_border = True   # evenly placed objects
+            if 'snemi3d' in data or 'iron' in data:
+                img = 1-img   # If the foreground pixels in the image are 0, then the pixels need to be inverted.
+            weight = weight_fuc._get_weight(img, single_border=single_border)
+            #print(i, ' costs ', time.time() - st)
+            #print('weight 0 --> min ', np.amin(weight[:,:,0]), ' max: ', np.amax(weight[:, :, 0]))
+            #print('weight 1 --> min ', np.amin(weight[:,:,1]), ' max: ', np.amax(weight[:, :, 1]))
 
-                if cnt == 1:
-                    plt.figure(figsize=(100, 100))
-                    plt.subplot(1,2,1), plt.imshow(weight[:,:,0], cmap='plasma'), plt.title('weight_0')
-                    plt.subplot(1,2,2), plt.imshow(weight[:,:,1], cmap='plasma'), plt.title('weight_1')
-                    # plt.savefig('./weight_'+data.split('/')[0]+'.jpg')
-                    plt.show()
-                    #break
-                
-                save_dir = cwd + "/data/maps/"  # noqa
-                if not os.path.exists(save_dir):
-                    os.mkdir(save_dir)
-                weight = np.transpose(weight, axes=(2, 0, 1))
-                np.save(os.path.join(save_dir, lbp_name+'.npy'), weight)
-                del weight
-                gc.collect()
-                cnt += 1
-                
-        print('handle ... ', data, ' done!')
+            #if cnt == 1:
+            #    plt.figure(figsize=(100, 100))
+            #    plt.subplot(1,2,1), plt.imshow(weight[:,:,0], cmap='plasma'), plt.title('weight_0')
+            #    plt.subplot(1,2,2), plt.imshow(weight[:,:,1], cmap='plasma'), plt.title('weight_1')
+            #    # plt.savefig('./weight_'+data.split('/')[0]+'.jpg')
+            #    plt.show()
+            #    #break
+            
+            save_dir = map_dir  # noqa
+            if not os.path.exists(save_dir):
+                os.mkdir(save_dir)
+            weight = np.transpose(weight, axes=(2, 0, 1))
+            np.save(os.path.join(save_dir, lbp_name+'.npy'), weight)
+            del weight
+            gc.collect()
+            cnt += 1
+
+if __name__ == "__main__":
+    dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
+    for dataset_name in dataset_names:
+        map_gen_skea_topo(dataset_name)
