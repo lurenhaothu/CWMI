@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import random
+import math
 
 cwd = os.getcwd()
 
@@ -92,10 +93,17 @@ def data_prepare_Drive():
         mask = Image.open(masks_paths[i + 1])
         mask_np = np.array(mask)
 
+        H, W, C = image_np.shape
+        pad_H = math.ceil(H / 32) * 32 - H
+        pad_W = math.ceil(W / 32) * 32 - W
+
+        image_np = np.pad(image_np, ((pad_H // 2, pad_H - pad_H // 2), (pad_W // 2, pad_W - pad_W // 2), (0, 0)), mode='edge')
+        mask_np = np.pad(mask_np, ((pad_H // 2, pad_H - pad_H // 2), (pad_W // 2, pad_W - pad_W // 2)), mode='edge')
+
         imageMean[i, :] = np.mean(image_np / 255, axis=(0, 1))
         imageStd[i, :] = np.std(image_np / 255, axis=(0, 1))
 
-        image.save(images_output_dir + str(i).zfill(3) + '.png')
+        Image.fromarray(image_np).save(images_output_dir + str(i).zfill(3) + '.png')
 
         mask = Image.fromarray(mask_np.astype(np.uint8))
 
@@ -108,49 +116,6 @@ def data_prepare_Drive():
     dataset_metadata = pd.DataFrame({"Name": ["DRIVE " + c for c in "RGB"], "mean": mean.tolist(), "std": std.tolist()})
     
     dataset_metadata.to_csv(cwd + "/data/DRIVE/dataset_metadata.csv", index=False)
-
-def data_prepare_GlaS():
-
-    images_dir = cwd + "/data/GlaS/Warwick_QU_Dataset/"
-
-    images_output_dir = cwd + "/data/GlaS/images/"
-    os.makedirs(images_output_dir, exist_ok=True)
-    masks_output_dir = cwd + "/data/GlaS/masks/"
-    os.makedirs(masks_output_dir, exist_ok=True)
-
-    all_paths = [(images_dir + p) for p in os.listdir(images_dir) if p.endswith('.bmp')]
-    images_paths = [p for p in all_paths if not p.endswith('anno.bmp')]
-    masks_paths = [p for p in all_paths if p.endswith('anno.bmp')]
-    images_paths.sort()
-    masks_paths.sort()
-
-    length = len(images_paths)
-
-    imageMean = np.zeros((length, 3))
-    imageStd = np.zeros((length, 3))
-
-    for i in range(length):
-        image = Image.open(images_paths[i])
-        image_np = np.array(image)
-        mask = Image.open(masks_paths[i])
-        mask_np = np.array(mask)
-
-        imageMean[i, :] = np.mean(image_np / 255, axis=(0, 1))
-        imageStd[i, :] = np.std(image_np / 255, axis=(0, 1))
-
-        image.save(images_output_dir + str(i).zfill(3) + '.png')
-
-        mask = Image.fromarray((mask_np * 255).astype(np.uint8))
-
-        mask.save(masks_output_dir + str(i).zfill(3) + '.png')
-
-    mean = np.mean(imageMean, axis=0)
-    std = np.sqrt(np.sum(np.power(imageStd, 2) + np.power(imageMean - mean, 2), axis=0) / length)
-    print("finish processing GlaS dataset", " len: ", length, " mean: ", mean, " std: ", std)
-
-    dataset_metadata = pd.DataFrame({"Name": ["GlaS " + c for c in "RGB"], "mean": mean.tolist(), "std": std.tolist()})
-    
-    dataset_metadata.to_csv(cwd + "/data/GlaS/dataset_metadata.csv", index=False)
 
 def data_prepare_GlaS():
 
@@ -176,10 +141,17 @@ def data_prepare_GlaS():
         mask = Image.open(masks_paths[i])
         mask_np = np.array(mask)
 
+        H, W, C = image_np.shape
+        pad_H = math.ceil(H / 32) * 32 - H
+        pad_W = math.ceil(W / 32) * 32 - W
+
+        image_np = np.pad(image_np, ((pad_H // 2, pad_H - pad_H // 2), (pad_W // 2, pad_W - pad_W // 2), (0, 0)), mode="constant", constant_values=255)
+        mask_np = np.pad(mask_np, ((pad_H // 2, pad_H - pad_H // 2), (pad_W // 2, pad_W - pad_W // 2)), mode="constant", constant_values=255)
+
         imageMean[i, :] = np.mean(image_np / 255, axis=(0, 1))
         imageStd[i, :] = np.std(image_np / 255, axis=(0, 1))
 
-        image.save(images_output_dir + str(i).zfill(3) + '.png')
+        Image.fromarray(image_np).save(images_output_dir + str(i).zfill(3) + '.png')
 
         mask = Image.fromarray((mask_np * 255).astype(np.uint8))
 
@@ -230,10 +202,17 @@ def data_prepare_mass_road(file_list):
         mask = Image.open(mask_dir + file_list[i])
         mask_np = np.array(mask)
 
+        H, W, C = image_np.shape
+        pad_H = math.ceil(H / 32) * 32 - H
+        pad_W = math.ceil(W / 32) * 32 - W
+
+        image_np = np.pad(image_np, ((pad_H // 2, pad_H - pad_H // 2), (pad_W // 2, pad_W - pad_W // 2), (0, 0)), mode='edge')
+        mask_np = np.pad(mask_np, ((pad_H // 2, pad_H - pad_H // 2), (pad_W // 2, pad_W - pad_W // 2)), mode='edge')
+
         imageMean[i, :] = np.mean(image_np / 255, axis=(0, 1))
         imageStd[i, :] = np.std(image_np / 255, axis=(0, 1))
 
-        image.save(images_output_dir + str(i).zfill(3) + '.png')
+        Image.fromarray(image_np).save(images_output_dir + str(i).zfill(3) + '.png')
 
         mask = Image.fromarray((mask_np).astype(np.uint8))
 
@@ -248,11 +227,11 @@ def data_prepare_mass_road(file_list):
     dataset_metadata.to_csv(cwd + "/data/mass_road/dataset_metadata.csv", index=False)
 
 if __name__ == "__main__":
-    data_prepare_SNEMI3D()
-    # data_prepare_Drive()
-    # data_prepare_GlaS()
+    # data_prepare_SNEMI3D()
+    data_prepare_Drive()
+    data_prepare_GlaS()
     #file_list = select_from_mass_road()
-    #df = pd.read_csv(cwd + "/data/mass_road/selected_files.csv")
-    #file_list = df["File_name"].tolist()
-    #data_prepare_mass_road(file_list)
+    df = pd.read_csv(cwd + "/data/mass_road/selected_files.csv")
+    file_list = df["File_name"].tolist()
+    data_prepare_mass_road(file_list)
     pass
