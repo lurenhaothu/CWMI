@@ -26,6 +26,8 @@ lossFuncs = [(loss.BCELoss, "")]
 
 model_classes = [models.AttU_Net, models.U_Net]
 
+dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
+
 def experiment(dataset_name, model_class, lossFunc, note=''):
 
     val_metric = metrics.miou
@@ -235,4 +237,5 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
 
 for  model_class in model_classes:
     for lossFunc, note in lossFuncs:
-        experiment(model_class, lossFunc, note)
+        for dataset_name in dataset_names:
+            experiment(dataset_name, model_class, lossFunc, note)
