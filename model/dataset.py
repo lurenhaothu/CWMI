@@ -28,13 +28,25 @@ class Dataset(torch.utils.data.Dataset):
             v2.ToImage(),
             v2.ToDtype(torch.float32, scale=True), # scale=True: 0-255 to 0-1
         ])
-        
+
         if augmentation:
-            self.transform = v2.Compose([
-                v2.RandomCrop(size=(512, 512)),
-                v2.RandomHorizontalFlip(),
-                v2.RandomVerticalFlip()
-            ])
+            if dataset_name == "SNEMI3D" or dataset_name == "mass_road":
+                self.transform = v2.Compose([
+                    v2.RandomCrop(size=(512, 512)),
+                    v2.RandomHorizontalFlip(),
+                    v2.RandomVerticalFlip()
+                ])
+            elif dataset_name == "GlaS":
+                self.transform = v2.Compose([
+                    v2.RandomCrop(size=(448, 576)),
+                    v2.RandomHorizontalFlip(),
+                    v2.RandomVerticalFlip()
+                ])
+            else:
+                self.transform = v2.Compose([
+                    v2.RandomHorizontalFlip(),
+                    v2.RandomVerticalFlip()
+                ])
         else:
             self.transform = None
 
