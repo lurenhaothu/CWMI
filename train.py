@@ -1,3 +1,4 @@
+%cd /content/CWMI
 import torch
 from sklearn.model_selection import KFold
 from model.dataset import Dataset
@@ -17,16 +18,17 @@ from datetime import datetime
 from data.map_gen_ABW import WeightMapLoss
 from model.clDice.clDice import soft_dice_cldice
 from model.rmi.rmi import RMILoss
-from model.MI.SPMI import SPMILoss
+from model.CWMI_loss.CWMI_loss import CWMI_loss
 from plot_result import plot_result
 from model.skea_topo.skea_topo_loss import Skea_topo_loss
 import model.att_unet as models
 
-lossFuncs = [(loss.BCELoss, "")]
+lossFuncs = [(CWMI_loss(complex=True, spN = 4, spK=12, beta=1, lamb=0.9, mag=1), "")]
 
-model_classes = [models.AttU_Net, models.U_Net]
+model_classes = [models.U_Net]
 
-dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
+# dataset_names = ["DRIVE", "GlaS", "mass_road", "SNEMI3D"]
+dataset_names = ["GlaS"]
 
 def experiment(dataset_name, model_class, lossFunc, note=''):
 
@@ -37,6 +39,8 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
     batch_size = 10
 
     epoch_num = 50
+
+    gradient_plt = False
 
     expriment_name = model_class.__name__ + "_" + dataset_name + "_" + lossFunc.__class__.__name__ + "_" + note + "_" + datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
@@ -81,8 +85,8 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
         else:
             weight_map_name = None
 
-        train_dataset = Dataset(dataset_name, train_list, augmentation=True, weight_map=weight_map_name)
-        val_dataset = Dataset(dataset_name, val_list, augmentation=False)
+        train_dataset = Dataset(dataset_name, train_list, augmentation=True, weight_map_name=weight_map_name)
+        val_dataset = Dataset(dataset_name, val_list, augmentation=False, weight_map_name=weight_map_name)
         test_dataset = Dataset(dataset_name, test_list, augmentation=False)
 
         train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -90,9 +94,9 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
         test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
 
         if dataset_name == "SNEMI3D":
-            model = model_class(ch_in=1, ch_out=2)
+            model = model_class(img_ch=1, output_ch=2)
         else: # all other datasets are RGB
-            model = model_class(ch_in=3, ch_out=2)
+            model = model_class(img_ch=3, output_ch=2)
 
         if load_pretrain:
             prev_dict = torch.load(pretrain_dir + "fold_" + str(fold) + "_best_model_state.pth")
@@ -151,7 +155,7 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
 
                 # TODO: calculate loss grad on pixels
 
-                if epoch % 10 == 9 and index == 0:
+                if gradient_plt and epoch % 10 == 9 and index == 0:
                     plot_figures = []
                     plot_figures.append(image.squeeze().numpy())
                     plot_figures.append(mask.squeeze().numpy())
@@ -166,7 +170,7 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
                     plot_figures.append(grad[0].cpu().squeeze().numpy())
 
                     fig_path = curResultDir + "fold_" + str(fold) + "_epoch_" + str(epoch) + "_val_sample.png"
-                    plot_result(plot_figures, fig_path, size=1024)
+                    plot_result(plot_figures, fig_path, size=plot_figures[-1].shape)
 
 
             with ThreadPoolExecutor(max_workers=10) as executor:
@@ -179,7 +183,7 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
             val_res_list.append(val_res)
             result = pd.DataFrame({
                 "Epoch": [epoch],
-                val_metric.__name__: [vi],
+                val_metric.__name__: [val_res],
             })
             if not os.path.exists(curResultDir + "fold_" + str(fold) + "_val_result.csv"):
                 result.to_csv(curResultDir + "fold_" + str(fold) + "_val_result.csv", index=False)
@@ -194,7 +198,7 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
             print("epoch: " + str(epoch) + " " + val_metric.__name__ + ": " + str(val_res))
 
         #test
-        best_state_dict = torch.load(curResultDir + "fold_" + str(fold) + "_best_model_state.pth")
+        best_state_dict = torch.load(curResultDir + "fold_" + str(fold) + "_best_model_state.pth", weights_only=True)
         model.load_state_dict(best_state_dict)
         model.eval()
 
@@ -234,6 +238,7 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
         for metric_name, value in test_results:
             print(metric_name + ": " + str(value))
         print("---------------------------------------------------------")
+        torch.cuda.empty_cache()
 
 for  model_class in model_classes:
     for lossFunc, note in lossFuncs:

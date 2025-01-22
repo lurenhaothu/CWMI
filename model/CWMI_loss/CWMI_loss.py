@@ -3,7 +3,8 @@ import torchvision
 # from model.MI.steerable import SteerablePyramid
 #from steerable import SteerablePyramid
 
-from model.MI.ComplexSteerablePyramid import ComplexSteerablePyramid
+from model.CWMI_loss.ComplexSteerablePyramid import ComplexSteerablePyramid
+from model.CWMI_loss.SSIM import SSIM
 import model.loss as loss
 
 from PIL import Image
@@ -16,16 +17,19 @@ _POS_ALPHA = 5e-4
 
 # 1-12-25 tested: 0.0001 SPMI + 0.01 BCE
 
-class SPMILoss(torch.nn.Module):
-    def __init__(self, complex=False, spN = 4, spK=4, beta=0.25, lamb=0.5, mag=1, ffl: bool=False):
-        super(SPMILoss, self).__init__()
+class CWMI_loss(torch.nn.Module):
+    def __init__(self, complex=False, spN = 4, spK=4, beta=1, lamb=0.9, mag=1, CW_method="MI"):
+        # CW_method: MI: mutual information; L1: L1 distance; L2: L2 distance; SSIM: Structure SIMilarity
+        super(CWMI_loss, self).__init__()
         self.sp = ComplexSteerablePyramid(complex=complex, N=spN, K=spK)
         self.complex = complex
         self.beta = beta
-        self.ffl = ffl
         self.lamb = lamb
         self.mag = mag
         self.BCEW = loss.BCE_withClassBalance()
+        self.CW_method = CW_method
+        if self.CW_method == "SSIM":
+            self.ssim = SSIM()
 
     def forward(self, mask, pred, w_map, class_weight, epoch=None):
         if epoch == 0:
@@ -34,13 +38,17 @@ class SPMILoss(torch.nn.Module):
         sp_pred = self.sp(pred)
         mi_output = []
         for i in range(self.sp.N):
-            if not self.ffl:
+            if self.CW_method == "MI":
                 if self.complex:
                     mi_output.append(torch.mean(self.complex_mi(sp_mask[i + 1], sp_pred[i + 1])).real)
                 else:
                     mi_output.append(torch.mean(self.real_mi(sp_mask[i + 1], sp_pred[i + 1])))
-            else:
-                mi_output.append(torch.mean(torch.log(torch.norm(sp_mask[i + 1] - sp_pred[i + 1], dim=1))))
+            elif self.CW_method == "L1":
+                mi_output.append(torch.mean(torch.sum(sp_mask[i + 1] - sp_pred[i + 1], dim=2)))
+            elif self.CW_method == "L2":
+                mi_output.append(torch.mean(torch.sqrt(torch.sum(torch.pow(sp_mask[i + 1] - sp_pred[i + 1], 2), dim=2))))
+            elif self.CW_method == "SSIM":
+                mi_output.append(self.ssim(sp_mask[i + 1].squeeze(1), sp_pred[i + 1].squeeze(1)))
         # print(mi_output)
         loss = self.BCEW(mask, pred, None, class_weight) * self.lamb
         for i in range(self.sp.N):
