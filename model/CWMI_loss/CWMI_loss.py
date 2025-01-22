@@ -18,7 +18,7 @@ _POS_ALPHA = 5e-4
 # 1-12-25 tested: 0.0001 SPMI + 0.01 BCE
 
 class CWMI_loss(torch.nn.Module):
-    def __init__(self, complex=False, spN = 4, spK=4, beta=1, lamb=0.9, mag=1, CW_method="MI"):
+    def __init__(self, complex, spN = 4, spK=4, beta=1, lamb=0.9, mag=1, CW_method="MI", select = None):
         # CW_method: MI: mutual information; L1: L1 distance; L2: L2 distance; SSIM: Structure SIMilarity
         super(CWMI_loss, self).__init__()
         self.sp = ComplexSteerablePyramid(complex=complex, N=spN, K=spK)
@@ -30,6 +30,7 @@ class CWMI_loss(torch.nn.Module):
         self.CW_method = CW_method
         if self.CW_method == "SSIM":
             self.ssim = SSIM()
+        self.select = select
 
     def forward(self, mask, pred, w_map, class_weight, epoch=None):
         if epoch == 0:
@@ -44,15 +45,21 @@ class CWMI_loss(torch.nn.Module):
                 else:
                     mi_output.append(torch.mean(self.real_mi(sp_mask[i + 1], sp_pred[i + 1])))
             elif self.CW_method == "L1":
-                mi_output.append(torch.mean(torch.sum(sp_mask[i + 1] - sp_pred[i + 1], dim=2)))
+                mi_output.append(torch.mean(torch.sum(torch.abs(sp_mask[i + 1] - sp_pred[i + 1]), dim=2)))
             elif self.CW_method == "L2":
-                mi_output.append(torch.mean(torch.sqrt(torch.sum(torch.pow(sp_mask[i + 1] - sp_pred[i + 1], 2), dim=2))))
+                mi_output.append(torch.mean(torch.sqrt(torch.sum(torch.pow(torch.abs(sp_mask[i + 1] - sp_pred[i + 1]), 2), dim=2))))
             elif self.CW_method == "SSIM":
-                mi_output.append(self.ssim(sp_mask[i + 1].squeeze(1), sp_pred[i + 1].squeeze(1)))
+                if self.complex:
+                    mi_output.append(self.ssim(torch.abs(sp_mask[i + 1]).squeeze(1), torch.abs(sp_pred[i + 1]).squeeze(1)))
+                else:
+                    mi_output.append(self.ssim(sp_mask[i + 1].squeeze(1), sp_pred[i + 1].squeeze(1)))
         # print(mi_output)
         loss = self.BCEW(mask, pred, None, class_weight) * self.lamb
-        for i in range(self.sp.N):
-            loss += math.pow(self.beta, self.sp.N - i - 1) * mi_output[i] * self.mag
+        if self.select == None:
+            for i in range(self.sp.N):
+                loss += math.pow(self.beta, self.sp.N - i - 1) * mi_output[i] * self.mag
+        else:
+            loss += mi_output[self.select]
         return loss
 
     def real_mi(self, mask, pred):

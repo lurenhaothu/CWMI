@@ -76,6 +76,6 @@ def ssim(img1, img2, window_size = 11, size_average = True):
 
 if __name__ == "__main__":
     nn_ssim = SSIM(size_average=False)
-    a = torch.rand((5, 12, 64, 64))
-    b = torch.rand((5, 12, 64, 64))
+    a = torch.rand((5, 12, 64, 64), dtype=torch.cfloat)
+    b = torch.rand((5, 12, 64, 64), dtype=torch.cfloat)
     print(nn_ssim(a, b))
