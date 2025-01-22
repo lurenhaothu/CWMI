@@ -1,6 +1,6 @@
 import torch
 from sklearn.model_selection import KFold
-from model.dataset import SNEMI3DDataset
+from model.dataset import Dataset
 from torch.utils.data import DataLoader
 from model.unet import UNet
 from PIL import Image
@@ -13,69 +13,94 @@ import random
 import model.loss as loss
 import time
 from concurrent.futures import ThreadPoolExecutor
+import model.att_unet as models
 
-expriment_name = "SNEMI3D_DiceLoss_btchSize_102025-01-08 21:31:22"
+experiment_names = ["U_Net_GlaS_BCELoss__2025-01-21-02-14-29",
+                    "U_Net_GlaS_BCE_withClassBalance__2025-01-21-03-07-35",
+                    "U_Net_GlaS_DiceLoss__2025-01-21-03-59-49",
+                    "U_Net_GlaS_FocalLoss_gamma_1.5_2025-01-21-04-55-43",
+                    "U_Net_GlaS_FocalLoss_gamma_2.5_2025-01-21-05-43-26",
+                    "U_Net_GlaS_FocalLoss_gamma_2_2025-01-21-05-41-36",
+                    "U_Net_GlaS_JaccardLoss__2025-01-21-04-53-14",
+                    "U_Net_GlaS_soft_dice_cldice__2025-01-21-05-50-22",
+                    "U_Net_GlaS_TverskyLoss_a_0.1_b_0.9_2025-01-21-04-50-24",
+                    "U_Net_GlaS_TverskyLoss_a_0.3_b_0.7_2025-01-21-04-05-26",
+                    "U_Net_GlaS_TverskyLoss_a_0.5_b_0.5_2025-01-21-04-02-55",
+                    ]
 
-post_process = True
-
-cwd = os.getcwd()
-curResultDir = cwd + "/results/" + expriment_name + "/"
+def test_experiment(experiment_name):
 
 
+    model = models.U_Net
 
-for fold in range(3):
+    dataset_name = "GlaS"
 
-    print("fold: " + str(fold))
+    cwd = os.getcwd()
 
-    testIndexFile = curResultDir + 'Fold_' + str(fold) + '_test.csv'
-    df = pd.read_csv(testIndexFile, header=None)
-    test_list = df[0].tolist()[1:]
+    result_folder = cwd
 
-    test_dataset = SNEMI3DDataset(test_list, augmentation=False)
-    test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+    curResultDir = result_folder + "/model/results/" + experiment_name + "/"
 
-    unet = UNet()
+    test_metrics = [metrics.miou, metrics.vi, metrics.mdice, metrics.ari, metrics.hausdorff_distance]
 
-    unet.cuda()
+    for fold in range(3):
 
-    #test
-    best_state_dict = torch.load(curResultDir + "fold_" + str(fold) + "_best_model_state.pth")
-    unet.load_state_dict(best_state_dict)
-    unet.eval()
+        print("fold: " + str(fold))
 
-    images_test = []
-    masks_test = []
-    preds_test = []
-    preds_bin_test = []
-    vis_test = []
-    for index, (image, mask, _) in enumerate(test_dataloader):
+        testIndexFile = curResultDir + 'Fold_' + str(fold) + '_test.csv'
+        df = pd.read_csv(testIndexFile, header=None)
+        test_list = df[0].tolist()[1:]
+
+        test_dataset = Dataset(dataset_name, test_list, augmentation=False)
+        test_dataloader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+
+        unet = model(img_ch=3, output_ch=2)
+
+        unet.cuda()
+
+        #test
+        best_state_dict = torch.load(curResultDir + "fold_" + str(fold) + "_best_model_state.pth")
+        unet.load_state_dict(best_state_dict)
         unet.eval()
-        with torch.no_grad():
-            pred = torch.softmax(unet(image.cuda()), 1)[:, 1:2, :, :]
-            images_test.append(image.squeeze().numpy())
-            masks_test.append(mask.squeeze().numpy())
-            preds_test.append(pred.cpu().squeeze().numpy())
-            preds_bin_test.append((preds_test[-1] > 0.5).astype(int))
 
-    if post_process:
-        for i in range(len(preds_bin_test)):
-            preds_bin_test[i] = metrics.post_process_output(preds_bin_test[i])
-            masks_test[i] = metrics.post_process_label(masks_test[i])
+        images_test = []
+        masks_test = []
+        preds_test = []
+        preds_bin_test = []
+        test_results = []
+        for index, (image, mask, w_map, class_weight) in enumerate(test_dataloader):
+            unet.eval()
+            with torch.no_grad():
+                pred = torch.softmax(unet(image.cuda()), 1)[:, 1:2, :, :]
+                # pred = torch.softmax(unet(image.cuda()), 1)
+                # pred = pred.max(1)[1].data
+                images_test.append(image.squeeze().numpy())
+                masks_test.append(mask.squeeze().numpy())
+                preds_test.append(pred.cpu().squeeze().numpy())
+                preds_bin_test.append((preds_test[-1] > 0.5).astype(int))
 
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        vis_test = list(executor.map(metrics.vi, preds_bin_test, masks_test))
-    vi_test = np.mean(vis_test)
+        for test_metric in test_metrics:
+            with ThreadPoolExecutor(max_workers=10) as executor:
+                test_result = list(executor.map(test_metric, preds_bin_test, masks_test))
+            test_results.append((test_metric.__name__, np.mean(test_result)))
 
-    test_result = pd.DataFrame({
-        "Fold": [fold],
-        "VI": [vi_test],
-    })
-    if not os.path.exists(curResultDir + "_test_result.csv"):
-        test_result.to_csv(curResultDir + "_test_result.csv", index=False)
-    else:
-        test_result.to_csv(curResultDir + "_test_result.csv", mode='a', header=False, index=False)
+        test_result_pd = {"Fold": [fold]}
+        for metric_name, value in test_results:
+            test_result_pd[metric_name] = [value]
 
-    print("---------------------------------------------------------")
-    print("-----------------------fold finished---------------------")
-    print("fold: " + str(fold) + " VI: " + str(vi_test))
-    print("---------------------------------------------------------")
+        test_result_pd = pd.DataFrame(test_result_pd)
+
+        if not os.path.exists(curResultDir + "_test_result_new.csv"):
+            test_result_pd.to_csv(curResultDir + "_test_result_new.csv", index=False)
+        else:
+            test_result_pd.to_csv(curResultDir + "_test_result_new.csv", mode='a', header=False, index=False)
+
+        print("---------------------------------------------------------")
+        print(experiment_name)
+        print("---------------------fold " + str(fold) + " finished---------------------")
+        for metric_name, value in test_results:
+            print(metric_name + ": " + str(value))
+        print("---------------------------------------------------------")
+
+for experiment_name in experiment_names:
+    test_experiment(experiment_name)

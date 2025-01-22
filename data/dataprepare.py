@@ -146,7 +146,10 @@ def data_prepare_GlaS():
         pad_W = math.ceil(W / 32) * 32 - W
 
         image_np = np.pad(image_np, ((pad_H // 2, pad_H - pad_H // 2), (pad_W // 2, pad_W - pad_W // 2), (0, 0)), mode="constant", constant_values=255)
-        mask_np = np.pad(mask_np, ((pad_H // 2, pad_H - pad_H // 2), (pad_W // 2, pad_W - pad_W // 2)), mode="constant", constant_values=255)
+        mask_np = np.pad(mask_np, ((pad_H // 2, pad_H - pad_H // 2), (pad_W // 2, pad_W - pad_W // 2)), mode="constant", constant_values=0)
+
+        mask_np[mask_np != 0] = 1
+        mask_np = 1 - mask_np
 
         imageMean[i, :] = np.mean(image_np / 255, axis=(0, 1))
         imageStd[i, :] = np.std(image_np / 255, axis=(0, 1))
@@ -228,10 +231,10 @@ def data_prepare_mass_road(file_list):
 
 if __name__ == "__main__":
     # data_prepare_SNEMI3D()
-    data_prepare_Drive()
+    # data_prepare_Drive()
     data_prepare_GlaS()
     #file_list = select_from_mass_road()
-    df = pd.read_csv(cwd + "/data/mass_road/selected_files.csv")
-    file_list = df["File_name"].tolist()
-    data_prepare_mass_road(file_list)
+    #df = pd.read_csv(cwd + "/data/mass_road/selected_files.csv")
+    #file_list = df["File_name"].tolist()
+    #data_prepare_mass_road(file_list)
     pass

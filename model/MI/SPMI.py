@@ -41,7 +41,7 @@ class SPMILoss(torch.nn.Module):
                     mi_output.append(torch.mean(self.real_mi(sp_mask[i + 1], sp_pred[i + 1])))
             else:
                 mi_output.append(torch.mean(torch.log(torch.norm(sp_mask[i + 1] - sp_pred[i + 1], dim=1))))
-        print(mi_output)
+        # print(mi_output)
         loss = self.BCEW(mask, pred, None, class_weight) * self.lamb
         for i in range(self.sp.N):
             loss += math.pow(self.beta, self.sp.N - i - 1) * mi_output[i] * self.mag

@@ -81,8 +81,8 @@ def map_gen_skeleton(dataset_name):
             img = io.imread(lbp)
             if np.amax(img) == 255 and len(np.unique(img)) == 2:
                 img = img * 1.0 / 255.0
-            if 'snemi3d' in data or 'iron' in data:
-                img = 1-img   # If the foreground in the image is 0, then the pixels need to be inverted.
+            #f 'snemi3d' in data or 'iron' in data:
+            #    img = 1-img   # If the foreground in the image is 0, then the pixels need to be inverted.
             skelen = calc_back_skelen(img)
             #print(i, ' costs ', time.time() - st, flush=True)
 
@@ -112,6 +112,6 @@ def map_gen_skeleton(dataset_name):
         # print('handle ... ', data, ' done!')
 
 if __name__ == "__main__":
-    dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
+    dataset_names = ["SNEMI3D", "DRIVE", "GlaS"]
     for dataset_name in dataset_names:
         map_gen_skeleton(dataset_name)

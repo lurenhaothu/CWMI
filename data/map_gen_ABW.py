@@ -191,14 +191,11 @@ class WeightMapLoss(nn.Module):
             return weight_map
         
 def map_gen_ABW(dataset_name):
-
+    cwd = os.getcwd()
     mask_dir = cwd + "/data/" + dataset_name + "/masks/"
     map_dir = cwd + "/data/" + dataset_name + "/ABW_maps/"
     t = time.time()
 
-    cwd = os.getcwd()
-    mask_dir = cwd + "/data/masks/"
-    map_dir = cwd + "/data/maps/"
     os.makedirs(map_dir, exist_ok=True)
 
     def save_ABW_map(index):
@@ -213,7 +210,7 @@ def map_gen_ABW(dataset_name):
 
 
 if __name__ == "__main__":
-    dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
+    dataset_names = ["GlaS"]
     for dataset_name in dataset_names:
         map_gen_ABW(dataset_name)
     

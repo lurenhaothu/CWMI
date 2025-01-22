@@ -142,12 +142,18 @@ class SkeletonAwareWeight():
 
         min_dis_2 = np.zeros((h, w, 2))
 
-        with ThreadPoolExecutor() as executor:
-            futures = [executor.submit(self.get_first_2, j, min_dis[j:j+1, :, :]) for j in range(h)]
+        if label_num > 2:
+            with ThreadPoolExecutor() as executor:
+                futures = [executor.submit(self.get_first_2, j, min_dis[j:j+1, :, :]) for j in range(h)]
 
-            for future in futures:
-                j, chunk = future.result()
-                min_dis_2[j:j+1, :, :] = chunk
+                for future in futures:
+                    j, chunk = future.result()
+                    min_dis_2[j:j+1, :, :] = chunk
+        elif label_num == 2:
+            min_dis_2 = min_dis
+        else:
+            min_dis_2[:,:,0] = min_dis[:,:,0]
+            min_dis_2[:,:,1] = min_dis[:,:,0]
             
         # Calculate for each pixel the distances to the first nearest(d1) and second nearest(d2) connected regions
         # min_dis.sort(axis=2)
@@ -231,10 +237,10 @@ def map_gen_skea_topo(dataset_name):
                 img = img * 1.0 / 255.0
 
             single_border = False
-            if 'iron' in data or 'mass_road' in data:
-                single_border = True   # evenly placed objects
-            if 'snemi3d' in data or 'iron' in data:
-                img = 1-img   # If the foreground pixels in the image are 0, then the pixels need to be inverted.
+            #if 'iron' in data or 'mass_road' in data:
+            #    single_border = True   # evenly placed objects
+            #if 'snemi3d' in data or 'iron' in data:
+            #    img = 1-img   # If the foreground pixels in the image are 0, then the pixels need to be inverted.
             weight = weight_fuc._get_weight(img, single_border=single_border)
             #print(i, ' costs ', time.time() - st)
             #print('weight 0 --> min ', np.amin(weight[:,:,0]), ' max: ', np.amax(weight[:, :, 0]))
@@ -258,6 +264,6 @@ def map_gen_skea_topo(dataset_name):
             cnt += 1
 
 if __name__ == "__main__":
-    dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
+    dataset_names = ["GlaS"]
     for dataset_name in dataset_names:
         map_gen_skea_topo(dataset_name)
