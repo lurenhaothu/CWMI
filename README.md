@@ -15,4 +15,32 @@ Recent advancements in deep neural networks have significantly enhanced the perf
 
 More depedencies are listed in requirements.txt
 
+## Prepare datasets and running
+- SNEMI3D can be download from https://zenodo.org/record/7142003, and it should be placed in ./data/snemi3d/.  <br>
+- GlaS can be download from https://www.kaggle.com/datasets/sani84/glasmiccai2015-gland-segmentation, and it should be placed as ./data/GlaS/Warwick_QU_Dataset/.  <br>
+- DRIVE can be download from https://www.kaggle.com/datasets/yurekanramasamy/drive-dataset, and it should be placed as ./data/DRIVE/Drive_source/.  <br>
+- MASS ROAD can be download from https://www.kaggle.com/datasets/balraj98/massachusetts-roads-dataset, and it should be placed as ./data/mass_road/mass_road_source/.  <br>
+
+Usage Demo:
+
+    # prepare datasets and calculate mean and std for each datasets
+    python ./data/dataprepare.py
+
+    # train
+    run train.ipynb
+
+    # eval 
+    run eval.ipynb
+
+CWMI doesn't need any other data preparation. However, if you would like to test other weight map based loss functions, please run below:
+
+    # Unet weight map arXiv:1505.04597
+    python ./data/map_gen_unet.py
+
+    # ABW loss arXiv:1905.09226v2
+    python ./data/map_gen_ABW.py
+
+    # Skea_topo loss arXiv:2404.18539
+    python ./data/skeleton_aware_loss_gen.py
+    python ./data/skeleton_gen.py
 
