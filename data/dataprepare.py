@@ -230,11 +230,11 @@ def data_prepare_mass_road(file_list):
     dataset_metadata.to_csv(cwd + "/data/mass_road/dataset_metadata.csv", index=False)
 
 if __name__ == "__main__":
-    # data_prepare_SNEMI3D()
-    # data_prepare_Drive()
+    data_prepare_SNEMI3D()
+    data_prepare_Drive()
     data_prepare_GlaS()
-    #file_list = select_from_mass_road()
-    #df = pd.read_csv(cwd + "/data/mass_road/selected_files.csv")
-    #file_list = df["File_name"].tolist()
-    #data_prepare_mass_road(file_list)
+    file_list = select_from_mass_road()
+    df = pd.read_csv(cwd + "/data/mass_road/selected_files.csv")
+    file_list = df["File_name"].tolist()
+    data_prepare_mass_road(file_list)
     pass

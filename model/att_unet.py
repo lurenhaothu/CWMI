@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch
 
+# copied from https://github.com/LeeJunHyun/Image_Segmentation
+
 class conv_block(nn.Module):
     def __init__(self, ch_in: int, ch_out: int):
         super(conv_block, self).__init__()

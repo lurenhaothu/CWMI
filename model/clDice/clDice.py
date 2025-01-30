@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from model.clDice.soft_skeleton import SoftSkeletonize
 
+# copied from https://github.com/jocpae/clDice
+
 class soft_cldice(nn.Module):
     def __init__(self, iter_=3, smooth = 1., exclude_background=False):
         super(soft_cldice, self).__init__()

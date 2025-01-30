@@ -15,6 +15,8 @@ from skimage import morphology
 import matplotlib.pyplot as plt
 from typing import Callable, Iterable, List, Set, Tuple
 
+# copied from https://github.com/clovermini/Skea_topo
+
 
 '''
 For foreground skelenton and background skelenton generate
@@ -112,6 +114,6 @@ def map_gen_skeleton(dataset_name):
         # print('handle ... ', data, ' done!')
 
 if __name__ == "__main__":
-    dataset_names = ["SNEMI3D", "DRIVE", "GlaS"]
+    dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
     for dataset_name in dataset_names:
         map_gen_skeleton(dataset_name)

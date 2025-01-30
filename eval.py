@@ -15,17 +15,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 import model.att_unet as models
 
-experiment_names = ["U_Net_GlaS_BCELoss__2025-01-21-02-14-29",
-                    "U_Net_GlaS_BCE_withClassBalance__2025-01-21-03-07-35",
-                    "U_Net_GlaS_DiceLoss__2025-01-21-03-59-49",
-                    "U_Net_GlaS_FocalLoss_gamma_1.5_2025-01-21-04-55-43",
-                    "U_Net_GlaS_FocalLoss_gamma_2.5_2025-01-21-05-43-26",
-                    "U_Net_GlaS_FocalLoss_gamma_2_2025-01-21-05-41-36",
-                    "U_Net_GlaS_JaccardLoss__2025-01-21-04-53-14",
-                    "U_Net_GlaS_soft_dice_cldice__2025-01-21-05-50-22",
-                    "U_Net_GlaS_TverskyLoss_a_0.1_b_0.9_2025-01-21-04-50-24",
-                    "U_Net_GlaS_TverskyLoss_a_0.3_b_0.7_2025-01-21-04-05-26",
-                    "U_Net_GlaS_TverskyLoss_a_0.5_b_0.5_2025-01-21-04-02-55",
+experiment_names = [
                     ]
 
 def test_experiment(experiment_name):

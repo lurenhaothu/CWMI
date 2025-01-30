@@ -18,6 +18,8 @@ from typing import Callable, Iterable, List, Set, Tuple
 from concurrent.futures import ThreadPoolExecutor
 
 
+# copied from https://github.com/clovermini/Skea_topo
+
 # from model.utils.utils_overlap import OverlapTile
 
 
@@ -264,6 +266,6 @@ def map_gen_skea_topo(dataset_name):
             cnt += 1
 
 if __name__ == "__main__":
-    dataset_names = ["GlaS"]
+    dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
     for dataset_name in dataset_names:
         map_gen_skea_topo(dataset_name)

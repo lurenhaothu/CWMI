@@ -7,6 +7,9 @@ from matplotlib import pyplot as plt
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+# implemented based on paper: arXiv:1505.04597
+
+
 w0 = 10
 sigma = 5
 
@@ -69,6 +72,6 @@ def map_gen_unet(dataset_name):
         print('finished ' + str(i) + ' time: ' + str(time.time() - t))
 
 if __name__ == "__main__":
-    dataset_names = ["GlaS"]
+    dataset_names = ["SNEMI3D", "DRIVE", "GlaS", "mass_road"]
     for dataset_name in dataset_names:
         map_gen_unet(dataset_name)

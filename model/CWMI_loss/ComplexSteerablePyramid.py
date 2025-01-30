@@ -115,26 +115,3 @@ class ComplexSteerablePyramid(torch.nn.Module):
             output += torch.sum(fourier_domain[i] * masks['band'][i], dim=2) * masks['high'][i]
         output = output * masks['low'][0] + fourier_domain[0] * masks['high'][0]
         return torch.fft.ifft2(torch.fft.ifftshift(output, dim=(2,3))).real
-
-if __name__ == "__main__":
-    a = ComplexSteerablePyramid(N=3, complex=True)
-    path = "C:/Users/Renhao Lu/Desktop/dwt/test.jpg"
-    imgg = torchvision.transforms.Grayscale(num_output_channels=1)(torchvision.transforms.ToTensor()(Image.open(path)))
-    imgg = imgg.unsqueeze(0).cuda()
-
-    output = a(imgg)
-
-    for i in output:
-        print(i.shape)
-        print(i.dtype)
-
-    recons = a.reconstruct(output)
-
-    fig, axe = plt.subplots(2,3)
-    axe[0][0].imshow(imgg.cpu().squeeze().numpy())
-    axe[0][1].imshow(recons.real.cpu().squeeze().numpy())
-    axe[0][2].imshow(a.get_mask((400, 400))['high'][1].cpu().squeeze().numpy())
-    axe[1][0].imshow(output[0].real.cpu().squeeze().numpy())
-    axe[1][1].imshow(torch.sum(output[1], dim=2).angle().cpu().squeeze().numpy())
-    axe[1][2].imshow(output[-1].real.cpu().squeeze().numpy())
-    plt.show()

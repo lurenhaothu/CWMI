@@ -13,6 +13,8 @@ import matplotlib.colors as mcolors
 import torch
 import numpy as np
 
+# copied from https://github.com/clovermini/Skea_topo
+
 
 # show middle results
 def show(pred_ori, mask_ori, tfn, ffn, tfp, ffp):

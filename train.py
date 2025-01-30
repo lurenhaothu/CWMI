@@ -1,4 +1,4 @@
-%cd /content/CWMI
+# %cd /content/CWMI
 import torch
 from sklearn.model_selection import KFold
 from model.dataset import Dataset
@@ -27,8 +27,7 @@ lossFuncs = [(CWMI_loss(complex=True, spN = 4, spK=12, beta=1, lamb=0.9, mag=1),
 
 model_classes = [models.U_Net]
 
-# dataset_names = ["DRIVE", "GlaS", "mass_road", "SNEMI3D"]
-dataset_names = ["GlaS"]
+dataset_names = ["DRIVE", "GlaS", "mass_road", "SNEMI3D"]
 
 def experiment(dataset_name, model_class, lossFunc, note=''):
 
@@ -49,7 +48,7 @@ def experiment(dataset_name, model_class, lossFunc, note=''):
     os.makedirs(curResultDir, exist_ok=True)
 
     load_pretrain = False
-    pretrain_dir_name = "SNEMI3D_BCE_CLassW_val_miou_btchSize_10_2025-01-14-18-43-31"
+    pretrain_dir_name = ""
 
     pretrain_dir = cwd + "/results/" + pretrain_dir_name + "/"
 

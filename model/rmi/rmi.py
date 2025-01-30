@@ -3,6 +3,9 @@
 """
 The implementation of the paper:
 Region Mutual Information Loss for Semantic Segmentation.
+
+https://github.com/ZJULearning/RMI
+
 """
 
 # python 2.X, 3.X compatibility
