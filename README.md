@@ -44,3 +44,32 @@ CWMI doesn't need any other data preparation. However, if you would like to test
     python ./data/skeleton_aware_loss_gen.py
     python ./data/skeleton_gen.py
 
+## Results
+<p align = "center">
+<img src="figures/Table 1.png">
+</p>
+
+### SNEMI3D
+<p align = "center">
+<img src="figures/Figure 3.PNG">
+</p>
+
+### GlaS
+<p align = "center">
+<img src="figures/Figure 4.PNG">
+</p>
+
+### DRIVE
+<p align = "center">
+<img src="figures/Figure 5.PNG">
+</p>
+
+### MASS ROAD
+<p align = "center">
+<img src="figures/Figure 6.PNG">
+</p>
+
+### Computational cost
+<p align = "center">
+<img src="figures/Table 4.png">
+</p>
