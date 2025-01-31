@@ -1,5 +1,5 @@
 # CWMI
-The PyTorch implementation of the CWMI loss proposed in paper: **ComplexWavelet Mutual Information Loss for Semantic Segmentations**. <br>
+The PyTorch implementation of the CWMI loss proposed in paper: **Complex Wavelet Mutual Information Loss: A Multi-Scale loss function for Semantic Segmentation**. <br>
 
 ---
 
