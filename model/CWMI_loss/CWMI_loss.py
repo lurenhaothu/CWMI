@@ -23,7 +23,7 @@ class CWMI_loss(torch.nn.Module):
         if self.CW_method == "SSIM":
             self.ssim = SSIM()
         self.select = select
-        self.block_complex = block_complex
+        #self.block_complex = block_complex
 
     def forward(self, mask, pred, w_map, class_weight, epoch=None):
         if epoch == 0:
@@ -80,12 +80,12 @@ class CWMI_loss(torch.nn.Module):
     def complex_mi(self, mask, pred):
         B, C, A, H, W = mask.shape # A: angle, number of orientations of the steerable pyramid
         mask_flat = mask.view(B, C, A, H * W)
-        mask_flat = torch.cat((torch.cat((mask_flat.real, mask_flat.imag), dim=2), torch.cat((-mask_flat.img, mask_flat.real), dim=2)), dim=3)
+        mask_flat = torch.cat((torch.cat((mask_flat.real, mask_flat.imag), dim=2), torch.cat((-mask_flat.imag, mask_flat.real), dim=2)), dim=3)
         mask_mean = torch.mean(mask_flat, dim=3, keepdim=True)
         mask_centered = mask_flat - mask_mean
 
         pred_flat = pred.view(B, C, A, H * W)
-        pred_flat = torch.cat((torch.cat((pred_flat.real, pred_flat.imag), dim=2), torch.cat((-pred_flat.img, pred_flat.real), dim=2)), dim=3)
+        pred_flat = torch.cat((torch.cat((pred_flat.real, pred_flat.imag), dim=2), torch.cat((-pred_flat.imag, pred_flat.real), dim=2)), dim=3)
         pred_mean = torch.mean(pred_flat, dim=3, keepdim=True)
         pred_centered = pred_flat - pred_mean
 
@@ -93,7 +93,7 @@ class CWMI_loss(torch.nn.Module):
         var_pred = torch.matmul(pred_centered, torch.permute(pred_centered, (0, 1, 3, 2)))
         cov_mask_pred = torch.matmul(mask_centered, torch.permute(pred_centered, (0, 1, 3, 2)))
 
-        diag_matrix = torch.eye(A)
+        diag_matrix = torch.eye(2*A)
         inv_cov_pred = torch.inverse(var_pred + diag_matrix.type_as(var_pred) * _POS_ALPHA)
 
         cond_cov_mask_pred = var_mask - torch.matmul(torch.matmul(cov_mask_pred, inv_cov_pred), torch.permute(cov_mask_pred, (0, 1, 3, 2)))
